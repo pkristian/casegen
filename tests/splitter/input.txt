@@ -1,0 +1,46 @@
+Example data
+useAnyCaseYouWant
+3v3n.numb3rs.l1ke.528491
+Because it is parsing_WORDS
+
+HTTPServer
+user2Name
+__dunder__
+XMLHttpRequest
+getHTTP_Response
+//----
+2Girls1Cup
+SQL
+PostgreSQL
+A
+Příliš žluťoučký
+    spaced    by    love
+OAuth2Token
+IOError
+getID
+IDs
+parseJSONFast
+XMLHTTPRequest
+HTTPSConnectionURL
+PDFAndHTML
+iOS
+macOSVersion
+ABCd
+aB
+foo__bar
+_leading
+trailing_
+___
+a..b
+a	b
+x-1
+v2
+2v
+MP3Player
+utf8String
+HTTP2Server
+version2Point0
+a1B2c3
+snake_case_ALREADY
+O'Brien
+hello😀world
