@@ -1,0 +1,68 @@
+== camel
+userProfile
+httpServer
+createdAt
+== pascal
+UserProfile
+HttpServer
+CreatedAt
+== snake
+user_profile
+http_server
+created_at
+== screaming-snake
+USER_PROFILE
+HTTP_SERVER
+CREATED_AT
+== kebab
+user-profile
+http-server
+created-at
+== screaming-kebab
+USER-PROFILE
+HTTP-SERVER
+CREATED-AT
+== train
+User-Profile
+Http-Server
+Created-At
+== title
+User Profile
+Http Server
+Created At
+== sentence
+User profile
+Http server
+Created at
+== lower
+user profile
+http server
+created at
+== upper
+USER PROFILE
+HTTP SERVER
+CREATED AT
+== dot
+user.profile
+http.server
+created.at
+== path
+user/profile
+http/server
+created/at
+== ada
+User_Profile
+Http_Server
+Created_At
+== camel-snake
+user_Profile
+http_Server
+created_At
+== flat
+userprofile
+httpserver
+createdat
+== upper-flat
+USERPROFILE
+HTTPSERVER
+CREATEDAT

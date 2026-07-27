@@ -32,6 +32,36 @@ Input word split: `Casegen` + `Case`
 Note: "Train-Case" is ambiguous across libraries — most JS libs use `Casegen-Case`,
 some Ruby/Go libs use `CASEGEN-CASE`. Pick one, document it, accept the aliases.
 
+## Invocation
+
+```
+casegen [-i] [-q] -c CASE [FILE|-]...
+```
+
+Input is the concatenation of the operands, in order. `-` is stdin *at that
+position*, so placement is explicit instead of being encoded in a flag:
+
+| invocation | input |
+|---|---|
+| `casegen -c s f1 f2` | f1, f2 |
+| `casegen -c s -i` | stdin only |
+| `casegen -c s f1 f2 -` | f1, f2, stdin |
+| `casegen -c s - f1 f2` | stdin, f1, f2 |
+| `casegen -c s f1 - f2` | stdin between the two |
+| `casegen` | usage on stderr, exit 2 |
+
+`-i` means *stdin is the whole input*; passing it alongside a file is an error whose
+message points at `-`. Stdin is never read unless `-i` or `-` asks for it.
+
+`-c` selects case mode: every input line is one record. Without `-c` the input is a
+template. The case accepts a short code or a full name in any standard spelling —
+`-cs`, `-c s`, `-c snake`, `-csnake`, `--case=snake`, `--case snake`. Short codes
+exist only for the six most used plus `lower`: `c P s S k K l`. The aliases in the
+tables above (`constant`, `cobol`, `spinal`, `http-header`, `studly`, …) are
+accepted but hidden from `--help`.
+
+Exit codes: `0` fine, `1` runtime failure (unreadable file, I/O), `2` usage error.
+
 ## Directives
 
 ### Parsing rule
@@ -114,13 +144,16 @@ is active
 Precedent: Perl `__END__` / `__DATA__`, Ruby `__END__` + the `DATA` filehandle,
 PHP's own `__halt_compiler()`, and self-extracting shell archives.
 
-Open: what happens when a file has `end-template` **and** stdin has records —
-error, concatenate, or stdin wins? Erroring is the safe default; it's the only
-one you can loosen later without breaking anyone.
+Decided by the operand model: a template file and `-` are both just operands, read
+in order, so `casegen columns.tmpl -` appends stdin's records to whatever the file's
+own data section already holds. Concatenation — and not as a rule the template layer
+has to know about, but as a consequence of how input is assembled. This is also why
+there is no `-t` flag.
 
 ### Loop model
 
-One implicit collection: newline-delimited records on stdin. `foreach` takes no
+One implicit collection: the newline-delimited records that follow
+`casegen:end-template` in the assembled input. `foreach` takes no
 collection argument — it marks *which region repeats*. Everything outside a
 `foreach` block is emitted once, verbatim. Same shape as awk's `BEGIN` / body / `END`.
 
@@ -135,13 +168,25 @@ class Columns
 }
 ```
 
-## Edge cases to decide
+### Still open before the engine is written
 
-- **Acronyms** — `HTTPServer` → `http_server` or `h_t_t_p_server`? Round-trip back
-  to Pascal yields `HttpServer`. Most libs normalize; some keep an acronym list.
-- **Digits** — `user2Name` / `user2name` / `user_2_name`: does a digit boundary
-  start a new word?
-- **Leading/trailing separators** — `_private`, `__dunder__`: usually preserved verbatim.
+- **Does substitution happen outside `foreach`?** The parsing rule says every
+  content line gets substitution; the loop model says everything outside a
+  `foreach` is emitted *"once, verbatim"*. Both cannot hold. Suggested: constants
+  substitute everywhere, and the loop placeholder outside a loop is an error —
+  it has no record to bind to.
+- **A `foreach` over zero records** — silent empty output, or a warning? Warning
+  (suppressed by `-q`), exit 0, seems right.
+- **Is `raw` inherited into `foreach`?** Nesting needs a stack. If v1 stays flat,
+  `foreach` inside `raw` should be a hard error rather than quietly doing something.
+- **`casegen:var <Two Words> = <value>`** — proposed, not yet in the verb table. A
+  var is just a second placeholder bound to a constant instead of to the loop
+  record, so it reuses the entire substitution engine: same renderings, same
+  scanner, no new rendering code. Two vars can land inside one token —
+  `'table_prefix_entity_name'` → `'shop_customer_order'` — which falls out for
+  free and is the main argument for making vars placeholders rather than a
+  separate mechanism.
+
 ## Decided
 
 - **Digits are transparent.** A digit never creates a word boundary on its own; it
@@ -154,6 +199,31 @@ class Columns
 - **One input line = one output line.** A blank line, or a line with no word
   characters (`//----`), produces a blank output line — it is not skipped.
   Keeps output aligned with input for `diff`/`paste`.
+- **Acronyms end where the next word's lowercase begins.** A run of uppercase
+  splits before its *last* letter when a lowercase follows — `HTTP|Server`,
+  `XML|Http|Request`, `O|Auth2|Token`. With no trailing lowercase the run stays
+  whole: `Postgre|SQL`, `get|ID`. No acronym list, no dictionary. Accepted
+  consequence: round-tripping back through Pascal yields `HttpServer`.
+
+  Rejected: requiring a run of **3 or more** so `OAuth` and `IDs` stay joined. It
+  fixes exactly those two and breaks every single-letter prefix — `XValue` →
+  `xvalue`, `TResult` → `tresult`, `IService` → `iservice`, `EBadRequest` →
+  `ebad request`. Both shapes are `[Upper][Upper][lower]` and no rule separates
+  them. The prefixes are systematic (generics, interfaces, exceptions); the
+  acronyms are a short closed list. Over-splitting gives `o auth`, wrong but
+  visibly so; under-splitting invents plausible words that survive review. If
+  `OAuth` ever matters, add a post-split rejoin table — do not touch the
+  boundary predicate.
+- **Leading and trailing separators are dropped**, not preserved: `_leading` →
+  `leading`, `__dunder__` → `dunder`, `___` → a blank line. Keeping affixes is a
+  rendering concern; the splitter's job is words.
+- **Stdin is opt-in, via `-i` or `-`.** The `isatty` check is gone: bare `casegen`
+  prints usage and exits 2 without touching stdin, so behaviour is identical under
+  a terminal, a pipe, `< /dev/null`, cron and CI. This retired `tests/hello`, which
+  was tty-dependent by construction.
+- **EOF is distinguished from a read error.** `ferror` is checked after every
+  source; a directory (`EISDIR`) or a closed fd 0 (`EBADF`) names the path and
+  exits 1, while an empty file or `< /dev/null` is zero records and exit 0.
 
 ## Later (or never)
 
@@ -169,40 +239,14 @@ class Columns
   - `NUL` deserves its own message: `fgets` reads it but every `str*` call then
     treats the line as ending there, so half a line is processed with no sign.
   - Default should stay exit 0 (the mangled output is visible on stdout anyway);
-    add `--strict` to promote to fatal, and `-q` to suppress.
-  - **Blocked on the test harness**: `runTests.sh:92` uses `first_match` on
+    add `--strict` to promote to fatal, and `-q` to suppress. `-q` already exists
+    and is parsed — it simply has no warnings to suppress yet.
+  - **Blocked on the test harness**: `runTests.sh:135` uses `first_match` on
     `output.returned.*`, so it only ever diffs one file. Adding
     `output.expected.err` would sort before `.txt` and silently stop checking
     stdout — every test would still report PASS. Fix the runner to pair files by
-    extension first.
-- **Replace the tty check with an argument check.** Right now bare `casegen` uses
-  `isatty(STDIN_FILENO)` to detect "nothing piped in" and prints the placeholder
-  greeting instead of blocking on the terminal. That is the only way to tell an
-  interactive terminal from an empty pipe, but it makes behaviour depend on what
-  stdin is attached to, which is not reproducible:
-
-  | invocation | stdin is | result |
-  |---|---|---|
-  | `casegen` in a terminal | tty | greeting |
-  | `cat f \| casegen` | pipe | reads |
-  | `casegen < in.txt` | file | reads |
-  | `casegen < /dev/null` | file | reads, immediate EOF, no output |
-
-  Known consequence: **`tests/hello` is tty-dependent.** Its `command.sh` runs
-  `casegen` with no stdin redirect, so it inherits whatever stdin `runTests.sh`
-  had. Passes interactively; fails under `./tests/runTests.sh < /dev/null`, cron,
-  or most CI — with nothing wrong in the code.
-
-  Fix once flags exist: trigger on *no format argument given* → print usage to
-  stderr, exit 2, before touching stdin. Argument-based, deterministic under any
-  stdin, and `casegen --pascal` typed interactively still reads the terminal.
-
-- **Distinguish EOF from read error.** `getline` returns -1 for both. `< /dev/null`
-  and an empty file set `feof`; a closed fd 0 sets `ferror`/`EBADF` and a directory
-  sets `ferror`/`EISDIR` — both currently exit 0 with no output, silently. Check
-  `ferror(stdin)` after the loop and exit non-zero. Zero lines with `feof` set is
-  *not* an error.
-
+    extension first. (`tests/input-errors` sidesteps this by folding stderr and
+    exit codes into the single stdout file itself.)
 - **Unicode proper** — `ß` uppercases to `SS`, Turkish dotless `ı`, etc. Only if
   ASCII-only ever becomes painful.
 - **Marker false positives** — any line containing `casegen:` is eaten, including a

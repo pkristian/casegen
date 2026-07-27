@@ -1,0 +1,21 @@
+exit=2 -- casegen 
+casegen: no input given
+exit=2 -- casegen -i a.txt
+casegen: -i means stdin only, but 1 file(s) were given
+casegen: use "-" to say where the stream belongs, e.g.
+casegen:     casegen -c snake a.txt -
+exit=2 -- casegen -c
+casegen: -c requires a case
+exit=2 -- casegen -c nosuchcase
+casegen: unknown case "nosuchcase"
+exit=2 -- casegen -Z
+casegen: unknown option "-Z"
+exit=2 -- casegen --bogus
+casegen: unknown option "--bogus"
+exit=2 -- casegen -c lower a.txt - - -
+casegen: "-" given 3 times; stdin can only be read once
+exit=1 -- casegen -c lower nosuch.txt
+casegen: nosuch.txt: No such file or directory
+exit=1 -- casegen a.txt
+casegen: template mode is not implemented yet
+casegen: use -c CASE to render input lines (see --help)

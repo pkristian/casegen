@@ -1,2 +1,1 @@
-
-casegen < input.txt > output.returned.txt
+casegen -c lower input.txt > output.returned.txt
