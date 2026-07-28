@@ -170,7 +170,7 @@ Whatever wraps the marker is simply part of a line that gets thrown away.
 newline-delimited records, read verbatim — never scanned for directives or placeholders.
 Lines with no word characters are skipped, so blanks can space the data out.
 
-`columns.tmpl`:
+`columns.php`:
 
 ```php
 <?php
@@ -182,13 +182,13 @@ class Columns
 // casegen:end
 }
 // casegen:end-template
-user profile
-created at
-is active
+// user profile
+// created at
+// is active
 ```
 
 ```sh
-casegen columns.tmpl
+casegen columns.php
 ```
 
 ```php
@@ -206,7 +206,7 @@ Records can also come from anywhere else in the operand list, because a template
 `-` are both just operands read in order:
 
 ```sh
-printf 'session token\n' | casegen columns.tmpl -
+printf '// session token\n' | casegen columns.php -
 ```
 
 Same output as before, with one more constant on the end:
@@ -251,20 +251,38 @@ A var is the same object as the loop placeholder, with a fixed value instead of 
 per-record one — so it goes through the same scanner, and two of them can land inside one
 token:
 
-```console
-$ cat v.tmpl
-// casegen:var Table Prefix = shop
-// casegen:foreach
-    '<?= table_prefix_casegen_case ?>' => TablePrefixCasegenCase::class,
-// casegen:end
-// casegen:end-template
-customer order
-line item
+`entities.php`:
 
-$ casegen v.tmpl
-    '<?= shop_customer_order ?>' => ShopCustomerOrder::class,
-    '<?= shop_line_item ?>' => ShopLineItem::class,
+```php
+<?php
+// casegen:var Table Prefix = shop
+
+return [
+// casegen:foreach
+    'table_prefix_casegen_case' => TablePrefixCasegenCase::class,
+// casegen:end
+];
+// casegen:end-template
+// customer order
+// line item
 ```
+
+```sh
+casegen entities.php
+```
+
+```php
+<?php
+
+return [
+    'shop_customer_order' => ShopCustomerOrder::class,
+    'shop_line_item' => ShopLineItem::class,
+];
+```
+
+Both the template and its output pass `php -l`. The array key picks up two bindings inside
+one token — `table_prefix` and `casegen_case` — while the class name picks up the same two
+in pascal, from the same line.
 
 Longest match wins, ties going to whichever binding was defined first, so the result never
 depends on scan order. Output is never rescanned: a value that happens to contain a
