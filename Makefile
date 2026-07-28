@@ -9,7 +9,11 @@ BIN := casegen
 # friends sit alongside this one quite happily.
 BUILDDIR := cmake-build
 
-.PHONY: build configure test clean
+# Where `make install` puts things. /usr/local needs root; PREFIX=~/.local does not.
+# DESTDIR is honoured too, for staged installs by a package build.
+PREFIX ?= /usr/local
+
+.PHONY: build configure test install uninstall clean
 
 # cmake --build re-runs cmake by itself when CMakeLists.txt changes, so the cache file
 # only has to exist; it does not have to be up to date with anything.
@@ -35,6 +39,16 @@ compile_commands.json: $(BUILDDIR)/CMakeCache.txt
 # make test ARGS="-q splitter"  — ARGS is forwarded to the runner untouched.
 test: build
 	bash tests/runTests.sh $(ARGS)
+
+install: build
+	cmake --install $(BUILDDIR) --prefix $(DESTDIR)$(PREFIX)
+
+# cmake writes an install_manifest.txt listing exactly what it put where, so removal
+# does not have to guess at paths or repeat the layout rules from CMakeLists.txt.
+uninstall:
+	@[ -f $(BUILDDIR)/install_manifest.txt ] \
+	    || { echo "no $(BUILDDIR)/install_manifest.txt — nothing recorded as installed"; exit 1; }
+	xargs rm -fv < $(BUILDDIR)/install_manifest.txt
 
 clean:
 	rm -rf $(BUILDDIR)

@@ -29,3 +29,8 @@ target_link_options(casegen PRIVATE -static)
 # PATH, so put it there rather than teaching every test where a build tree lives.
 set_target_properties(casegen PROPERTIES
                       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}")
+
+# GNUInstallDirs rather than a hardcoded bin/, so packagers get the lib/lib64 and
+# multiarch conventions of whatever distribution they are on for free.
+include(GNUInstallDirs)
+install(TARGETS casegen RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

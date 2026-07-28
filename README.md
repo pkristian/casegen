@@ -21,12 +21,26 @@ its own output, and stays valid-looking code in whatever language it targets.
 
 ---
 
-## Build
-
-Needs a C11 compiler, CMake 3.16+ and make.
+## Install
 
 ```sh
-make build     # binary lands at ./casegen
+git clone https://github.com/pkristian/casegen.git && cd casegen && make && sudo make install
+```
+
+Needs a C11 compiler, CMake 3.16+ and make. That puts `casegen` in `/usr/local/bin`.
+To avoid `sudo`, install somewhere you already own:
+
+```sh
+git clone https://github.com/pkristian/casegen.git && cd casegen && make && make install PREFIX=~/.local
+```
+
+`make uninstall` removes exactly what was installed, reading the manifest CMake wrote —
+it does not guess at paths. `DESTDIR` is honoured for staged/package builds.
+
+## Build
+
+```sh
+make           # same as `make build`; binary lands at ./casegen
 make test      # build, then run the golden-file suite
 make clean
 ```
