@@ -1,7 +1,79 @@
 # casegen
 
-Short for **case generator**. Converts words between cases — and renders templates in
-which the placeholder *is* written in the case you want back.
+Short for **case generator**. It converts words between cases, and renders templates in
+which the placeholder is written in the case you want back.
+
+That inversion is the whole idea. There is no filter language and no `{{ }}`: you write
+the placeholder's name — `Casegen Case` by default — spelled the way the output should be
+spelled. `CASEGEN_CASE` comes back a constant, `casegenCase` a camel-case key,
+`casegen_case` a column name, and one template may use all of them at once, on the same
+line. Give it a list of names and it repeats whichever region you marked, once each.
+
+Because the placeholder is only a name, and the directives hide inside ordinary comments,
+a template is real code. It parses, it highlights, your linter reads it, and you can see
+what it will produce without running anything.
+
+`schema.php`:
+
+```php
+<?php
+// casegen:var Table Prefix = shop
+
+final class Schema
+{
+// casegen:foreach
+    /** The casegen case column. */
+    public const CASEGEN_CASE = 'table_prefix_casegen_case';
+// casegen:end
+
+    /** @return array<string,string> */
+    public static function all(): array
+    {
+        return [
+// casegen:foreach
+            self::CASEGEN_CASE => 'casegenCase',
+// casegen:end
+        ];
+    }
+}
+// casegen:end-template
+// user profile
+// created at
+```
+
+```sh
+casegen schema.php
+```
+
+```php
+<?php
+
+final class Schema
+{
+    /** The user profile column. */
+    public const USER_PROFILE = 'shop_user_profile';
+    /** The created at column. */
+    public const CREATED_AT = 'shop_created_at';
+
+    /** @return array<string,string> */
+    public static function all(): array
+    {
+        return [
+            self::USER_PROFILE => 'userProfile',
+            self::CREATED_AT => 'createdAt',
+        ];
+    }
+}
+```
+
+Two loops over one list, a `shop` prefix bound once, and each record arriving in four
+different cases — lower in the docblock, screaming snake as the constant name, snake
+inside the prefixed string, camel as the array value. Everything outside a loop is emitted
+once. Both files pass `php -l`.
+
+---
+
+## Quickstart
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/pkristian/casegen/master/install.sh | sh
@@ -14,24 +86,6 @@ helloWorld
 
 That bundle is `-i` (stdin is the whole input) and `-c c` (camel). More on
 [installing](#install) and on [what else it does](#case-mode) below.
-
----
-
-```php
-// casegen:foreach
-    const COL_CASEGEN_CASE = 'casegen_case';
-// casegen:end
-```
-
-Feed that `user profile`, and you get:
-
-```php
-    const COL_USER_PROFILE = 'user_profile';
-```
-
-One line, two different cases, no syntax to learn — the placeholder is a *name*, written
-however you want it to come out. Which means a casegen template is a working example of
-its own output, and stays valid-looking code in whatever language it targets.
 
 ---
 
