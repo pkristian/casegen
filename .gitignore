@@ -1,4 +1,4 @@
 tests/*/output.returned.*
 casegen
-obj/
+cmake-build*/
 compile_commands.json
