@@ -1,19 +1,17 @@
-/* Included by casegen.c — not compiled on its own.
-   See the note at the top of casegen.c for why there are no headers.
+/* Command line: flags, operands, and the usage text. */
 
-   Command line: flags, operands, and the usage text. */
+#include "args.h"
 
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-typedef struct
-{
-    const CaseSpec *spec; /* NULL means template mode */
-    int quiet;
-    int stdinOnly; /* -i */
-    StringList sources;
-} Options;
+#include "cases.h"
+#include "stringlist.h"
 
 
-void usage(FILE *out)
+static void usage(FILE *out)
 {
     fputs("Usage: casegen [-i] [-q] [-c CASE] [FILE|-]...\n"
           "\n"
@@ -55,7 +53,7 @@ void usage(FILE *out)
 }
 
 
-void usageError(const char *fmt, ...)
+static _Noreturn void usageError(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);

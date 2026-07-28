@@ -1,24 +1,27 @@
-/* casegen — case converter, and eventually a template renderer.
+/* casegen — case converter and template renderer.
 
-   One translation unit. The sections below live in separate files purely for
-   navigation; the preprocessor pastes them in here, in dependency order, so
-   the compiler still sees a single file. That means no headers to maintain and
-   every function stays `static`. Split into real modules with headers only if
-   something ever needs to link against one of them on its own. */
+   One module per concern, each with a header declaring only what other modules may
+   call; everything else in a .c is static. The dependencies run one way:
 
-#include <errno.h>
-#include <stdarg.h>
+       main    -> args, input, split, cases, template
+       args    -> cases, stringlist
+       template-> input, split, cases, stringlist
+       input   -> stringlist
+       split   -> ascii, stringlist
+       cases   -> ascii, stringlist
+       *       -> mem
+
+   mem is at the bottom because allocation failure is the one error every module can
+   hit and none can handle. Nothing includes main. */
+
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-#include "stringlist.c"
-#include "ascii.c"
-#include "split.c"
-#include "cases.c"
-#include "input.c"
-#include "template.c"
-#include "args.c"
+#include "args.h"
+#include "cases.h"
+#include "input.h"
+#include "split.h"
+#include "stringlist.h"
+#include "template.h"
 
 
 int main(const int argc, char *argv[])

@@ -1,29 +1,16 @@
-/* Included by casegen.c — not compiled on its own.
-   See the note at the top of casegen.c for why there are no headers.
+/* The 17 cases, as a table. Adding one is a row, not a function. */
 
-   The 17 cases, as a table. Adding one is a row, not a function. */
+#include "cases.h"
 
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 
-typedef enum
-{
-    STYLE_LOWER,
-    STYLE_UPPER,
-    STYLE_CAP /* first byte upper, rest lower */
-} WordStyle;
+#include "ascii.h"
+#include "mem.h"
 
 
-typedef struct
-{
-    const char *name;
-    char code; /* short code, 0 if the case has none */
-    const char *sep;
-    WordStyle first;
-    WordStyle rest;
-    int isAlias; /* aliases work but are hidden from --help */
-} CaseSpec;
-
-
-static const CaseSpec CASES[] = {
+const CaseSpec CASES[] = {
     /*  name                code  sep   first        rest                alias */
     {   "camel",            'c',  "",   STYLE_LOWER, STYLE_CAP,          0 },
     {   "pascal",           'P',  "",   STYLE_CAP,   STYLE_CAP,          0 },
@@ -57,12 +44,12 @@ static const CaseSpec CASES[] = {
     {   "slash",            0,    "/",  STYLE_LOWER, STYLE_LOWER,        1 },
 };
 
-/* A macro, not a const, so it can size an array: the template scanner keeps one
-   needle per case and wants a compile-time bound. */
-#define CASE_COUNT (sizeof CASES / sizeof CASES[0])
+/* The table above is the authority; this catches CASE_COUNT drifting from it either way.
+   See cases.h for why the declaration there must stay unbounded for this to work. */
+static_assert(sizeof CASES / sizeof CASES[0] == CASE_COUNT,
+              "CASE_COUNT in cases.h no longer matches the rows in CASES");
 
 
-/* A single-byte argument is looked up as a short code, anything longer as a name. */
 const CaseSpec *findCase(const char *s)
 {
     if (s[0] != '\0' && s[1] == '\0')
@@ -79,9 +66,7 @@ const CaseSpec *findCase(const char *s)
 }
 
 
-/* Words arrive already lowercased from splitWords, so LOWER is a no-op here.
-   The caller owns the returned string. The template engine renders into memory —
-   it compares against what it built — so this, not the FILE* form, is the primitive. */
+/* Words arrive already lowercased from splitWords, so LOWER is a no-op here. */
 char *renderCaseAlloc(const StringList *words, const CaseSpec *spec)
 {
     const size_t sepLen = strlen(spec->sep);

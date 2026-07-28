@@ -1,2 +1,3 @@
 tests/*/output.returned.*
 casegen
+obj/

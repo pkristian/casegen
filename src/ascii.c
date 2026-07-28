@@ -1,9 +1,5 @@
-/* Included by casegen.c — not compiled on its own.
-   See the note at the top of casegen.c for why there are no headers. */
+#include "ascii.h"
 
-
-/* ASCII only, by decision. Hand-rolled rather than <ctype.h> so that bytes >= 0x80
-   are unambiguously separators and nothing depends on the locale. */
 
 int isAsciiUpper(const unsigned char c)
 {

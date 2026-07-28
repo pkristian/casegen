@@ -1,7 +1,10 @@
-/* Included by casegen.c — not compiled on its own.
-   See the note at the top of casegen.c for why there are no headers.
+#include "split.h"
 
-   Splitting a line into lowercased words. */
+#include <stdlib.h>
+#include <string.h>
+
+#include "ascii.h"
+#include "mem.h"
 
 
 /* Does a new word start at `cur`? Digits never trigger a boundary on their own —
@@ -9,7 +12,8 @@
 
        lower|digit -> Upper     user2|Name, Postgre|SQL
        Upper Upper -> Upper+lower   HTTP|Server, O|Auth2|Token  */
-int isWordBoundary(const unsigned char prev, const unsigned char cur, const unsigned char next)
+static int isWordBoundary(const unsigned char prev, const unsigned char cur,
+                          const unsigned char next)
 {
     if (!isAsciiUpper(cur))
         return 0;
@@ -19,7 +23,7 @@ int isWordBoundary(const unsigned char prev, const unsigned char cur, const unsi
 }
 
 
-void flushWord(char *word, size_t *wordLen, StringList *out)
+static void flushWord(char *word, size_t *wordLen, StringList *out)
 {
     if (*wordLen == 0)
         return;
@@ -29,8 +33,6 @@ void flushWord(char *word, size_t *wordLen, StringList *out)
 }
 
 
-/* Split one line into lowercased words. Pure — no I/O, no formatting.
-   A line with no word bytes yields no words at all, which is not an error. */
 void splitWords(const char *line, StringList *out)
 {
     const unsigned char *s = (const unsigned char*)line;

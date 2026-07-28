@@ -1,7 +1,4 @@
-/* Included by main.c — not compiled on its own.
-   See the note at the top of main.c for why there are no headers.
-
-   Template mode: directives, placeholders, and the substitution scanner.
+/* Template mode: directives, placeholders, and the substitution scanner.
 
    The one idea worth stating up front: a placeholder is a *name*, not a syntax. Write
    the name in the case you want out, and that is what you get —
@@ -11,6 +8,20 @@
    so the template is a working example of its own output. Everything below exists to
    support that: render the name in all 17 cases, look for any of them, and emit the
    value in whichever one matched. */
+
+#include "template.h"
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "ascii.h"
+#include "cases.h"
+#include "input.h"
+#include "mem.h"
+#include "split.h"
+#include "stringlist.h"
 
 
 #define MARKER "casegen:"
@@ -22,13 +33,13 @@
 
 
 /* Newlines are already stripped by readLines, so these are the only two left. */
-int isSpaceByte(const unsigned char c)
+static int isSpaceByte(const unsigned char c)
 {
     return c == ' ' || c == '\t';
 }
 
 
-char *dupRange(const char *s, const size_t len)
+static char *dupRange(const char *s, const size_t len)
 {
     char *out = malloc(len + 1);
     if (!out)
@@ -41,7 +52,8 @@ char *dupRange(const char *s, const size_t len)
 
 /* "columns.tmpl:14", into caller storage — a message about one line sometimes has to
    name another (where the block it fails to close was opened). */
-void formatLocation(const SourceMap *map, const size_t index, char *buf, const size_t cap)
+static void formatLocation(const SourceMap *map, const size_t index, char *buf,
+                           const size_t cap)
 {
     const char *path;
     size_t lineNo;
@@ -52,7 +64,8 @@ void formatLocation(const SourceMap *map, const size_t index, char *buf, const s
 
 /* A bad template is the user getting it wrong, like a bad flag, so it exits 2 — but it
    prints no usage block, because the usage block has nothing to say about templates. */
-void templateError(const SourceMap *map, const size_t index, const char *fmt, ...)
+static _Noreturn void templateError(const SourceMap *map, const size_t index,
+                                    const char *fmt, ...)
 {
     char where[512];
     formatLocation(map, index, where, sizeof where);
@@ -68,8 +81,8 @@ void templateError(const SourceMap *map, const size_t index, const char *fmt, ..
 }
 
 
-void templateWarning(const SourceMap *map, const size_t index, const int quiet,
-                     const char *fmt, ...)
+static void templateWarning(const SourceMap *map, const size_t index, const int quiet,
+                            const char *fmt, ...)
 {
     if (quiet)
         return;
@@ -106,7 +119,7 @@ typedef struct
 } Binding;
 
 
-void bindingSetName(Binding *b, const char *name)
+static void bindingSetName(Binding *b, const char *name)
 {
     free(b->name);
     stringsFree(&b->nameWords);
@@ -134,14 +147,14 @@ void bindingSetName(Binding *b, const char *name)
 }
 
 
-void bindingSetValue(Binding *b, const char *value)
+static void bindingSetValue(Binding *b, const char *value)
 {
     stringsFree(&b->valueWords);
     splitWords(value, &b->valueWords);
 }
 
 
-void bindingFree(Binding *b)
+static void bindingFree(Binding *b)
 {
     free(b->name);
     stringsFree(&b->nameWords);
@@ -161,7 +174,7 @@ typedef struct
 
 /* Returns the new, zeroed slot. Note that the pointer dies at the next push — always
    reach the loop binding as &list->item[0], never through a saved pointer. */
-Binding *bindingsPush(BindingList *list)
+static Binding *bindingsPush(BindingList *list)
 {
     if (list->count == list->cap)
     {
@@ -178,7 +191,7 @@ Binding *bindingsPush(BindingList *list)
 }
 
 
-void bindingsFree(BindingList *list)
+static void bindingsFree(BindingList *list)
 {
     for (size_t i = 0; i < list->count; i++)
         bindingFree(&list->item[i]);
@@ -189,7 +202,7 @@ void bindingsFree(BindingList *list)
 }
 
 
-int sameWords(const StringList *a, const StringList *b)
+static int sameWords(const StringList *a, const StringList *b)
 {
     if (a->count != b->count)
         return 0;
@@ -203,8 +216,8 @@ int sameWords(const StringList *a, const StringList *b)
 /* One word renders the same in snake, kebab, dot, path, flat and lower alike, so the
    case the author wrote would no longer say which case they meant. Two words is what
    makes all 17 renderings distinct, which is what the scanner reads. */
-void requireTwoWords(const SourceMap *map, const size_t index, const char *what,
-                     const char *name)
+static void requireTwoWords(const SourceMap *map, const size_t index, const char *what,
+                            const char *name)
 {
     StringList words = {0};
     splitWords(name, &words);
@@ -221,8 +234,8 @@ void requireTwoWords(const SourceMap *map, const size_t index, const char *what,
 
 /* Two bindings answering to the same name would make the longest-match tie-break decide
    which one wins, which is no way to find out. `skip` is the binding being renamed. */
-void requireNameFree(const BindingList *list, const SourceMap *map, const size_t index,
-                     const char *name, const size_t skip)
+static void requireNameFree(const BindingList *list, const SourceMap *map, const size_t index,
+                            const char *name, const size_t skip)
 {
     StringList words = {0};
     splitWords(name, &words);
@@ -261,8 +274,8 @@ void requireNameFree(const BindingList *list, const SourceMap *map, const size_t
 
    A NULL `out` checks the line without emitting it, so a line that turns out to be an
    error does not leave half of itself on stdout first. */
-void substituteLine(const char *line, const BindingList *list, const int inLoop,
-                    const SourceMap *map, const size_t index, FILE *out)
+static void substituteLine(const char *line, const BindingList *list, const int inLoop,
+                           const SourceMap *map, const size_t index, FILE *out)
 {
     for (size_t i = 0; line[i] != '\0';)
     {
@@ -327,7 +340,7 @@ static const char *const DELIMITERS[] = {"-->", "--%>", "*/", "?>", "#}"};
 
    Note what is *not* here: no comment-syntax awareness. Whatever wraps the marker is
    simply part of a line that gets thrown away, which is why every comment style works. */
-int parseDirective(const char *line, char **verb, char **args)
+static int parseDirective(const char *line, char **verb, char **args)
 {
     const char *marker = strstr(line, MARKER);
     if (!marker)
@@ -403,7 +416,7 @@ typedef struct
 } Body;
 
 
-void bodyPush(Body *body, const size_t index, const int raw)
+static void bodyPush(Body *body, const size_t index, const int raw)
 {
     if (body->count == body->cap)
     {
@@ -418,7 +431,7 @@ void bodyPush(Body *body, const size_t index, const int raw)
 }
 
 
-int rawIsOpen(const Block *blocks, const size_t depth)
+static int rawIsOpen(const Block *blocks, const size_t depth)
 {
     for (size_t i = 0; i < depth; i++)
         if (strcmp(blocks[i].verb, "raw") == 0)
@@ -427,8 +440,8 @@ int rawIsOpen(const Block *blocks, const size_t depth)
 }
 
 
-void emitLine(const char *text, const BindingList *list, const int raw, const int inLoop,
-              const SourceMap *map, const size_t index, FILE *out)
+static void emitLine(const char *text, const BindingList *list, const int raw, const int inLoop,
+                     const SourceMap *map, const size_t index, FILE *out)
 {
     if (raw)
     {
@@ -447,16 +460,16 @@ void emitLine(const char *text, const BindingList *list, const int raw, const in
 }
 
 
-void requireNoArgs(const SourceMap *map, const size_t index, const char *verb,
-                   const char *args)
+static void requireNoArgs(const SourceMap *map, const size_t index, const char *verb,
+                          const char *args)
 {
     if (args[0] != '\0')
         templateError(map, index, "casegen:%s takes no arguments, got \"%s\"", verb, args);
 }
 
 
-void requireTopLevel(const SourceMap *map, const size_t index, const char *verb,
-                     const Block *blocks, const size_t depth)
+static void requireTopLevel(const SourceMap *map, const size_t index, const char *verb,
+                            const Block *blocks, const size_t depth)
 {
     if (depth == 0)
         return;

@@ -1,29 +1,17 @@
-/* Included by casegen.c — not compiled on its own.
-   See the note at the top of casegen.c for why there are no headers.
+/* Reading sources: a path, or "-" for stdin at that position. */
 
-   Reading sources: a path, or "-" for stdin at that position. */
+#include "input.h"
 
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-/* Operands are concatenated into one list of lines, which loses track of where each
-   line came from. A template diagnostic wants to say "columns.tmpl:14", not an offset
-   into the concatenation, so record one span per operand and look the answer up. */
-typedef struct
-{
-    const char *path; /* the operand as given; "-" means stdin */
-    size_t first; /* index of its first line in the assembled list */
-    size_t count;
-} SourceSpan;
+#include "mem.h"
 
 
-typedef struct
-{
-    SourceSpan *item;
-    size_t count;
-    size_t cap;
-} SourceMap;
-
-
-void spansPush(SourceMap *map, const char *path, const size_t first, const size_t count)
+static void spansPush(SourceMap *map, const char *path, const size_t first,
+                      const size_t count)
 {
     if (map->count == map->cap)
     {
@@ -48,8 +36,7 @@ void spansFree(SourceMap *map)
 }
 
 
-/* Assembled line index -> the operand it came from and its line number within it.
-   Linear, but the list has one entry per operand, so it is a handful at most. */
+/* Linear, but the list has one entry per operand, so it is a handful at most. */
 void locateLine(const SourceMap *map, const size_t index, const char **path, size_t *lineNo)
 {
     for (size_t i = 0; i < map->count; i++)
@@ -68,7 +55,7 @@ void locateLine(const SourceMap *map, const size_t index, const char **path, siz
 
 
 /* Read whole lines, newline (and CR) stripped, appending to `out`. */
-void readLines(FILE *f, StringList *out)
+static void readLines(FILE *f, StringList *out)
 {
     char *lineContent = NULL; /* getline allocates and reallocs this for us */
     size_t cap = 0; /* current capacity of that buffer            */
@@ -87,8 +74,6 @@ void readLines(FILE *f, StringList *out)
 }
 
 
-/* A source is a path, or "-" for stdin at that position in the operand list.
-   `map` may be NULL when the caller does not need line provenance. */
 void loadSource(const char *path, StringList *out, SourceMap *map)
 {
     const size_t first = out->count;
