@@ -35,53 +35,37 @@ its own output, and stays valid-looking code in whatever language it targets.
 
 ---
 
-## Install
+## What it's for
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/pkristian/casegen/master/install.sh | sh
+Generating the boilerplate that follows from a list of names. Database columns into class
+constants, field names into DTO properties or enum cases, an entity list into a service
+map, a schema into migrations — anywhere the same handful of names has to appear in four
+different casings and stay in step.
+
+The point of writing the placeholder in the target case is that the template stays real
+code. It parses, it highlights, your linter reads it, and you can tell at a glance what it
+will produce — rather than being a string full of `{{ name | snake_case }}`.
+
+For one-off conversions there is also plain case mode, which is just a filter.
+
+## Options
+
+```
+casegen [-i] [-q] [-c CASE] [FILE|-]...
 ```
 
-That installs any missing build dependencies, clones into a temporary directory, builds,
-installs to `/usr/local/bin`, and deletes the clone on the way out — including when it
-fails partway. `--prefix ~/.local` installs somewhere you already own and needs no `sudo`;
-`--no-deps` never touches the package manager.
+| Option | Meaning |
+|---|---|
+| `-c CASE`, `--case=CASE` | render every input line in `CASE` — see [Cases](#cases) |
+| *(no `-c`)* | template mode |
+| `-i` | stdin is the whole input; an error if a `FILE` is also given |
+| `-q`, `--quiet` | suppress warnings |
+| `-h`, `--help` | usage and the case table on stdout, exit 0 |
+| `--` | end of options |
+| `FILE`, `-` | read in order; `-` is stdin *at that position* |
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/pkristian/casegen/master/install.sh | sh -s -- --prefix ~/.local
-```
-
-Piping a script from the internet into a shell is a habit worth being deliberate about.
-`install.sh` is about a hundred readable lines, so fetch it and look before you run it:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/pkristian/casegen/master/install.sh -o install.sh
-less install.sh && sh install.sh
-```
-
-### By hand
-
-Needs a C11 compiler, CMake 3.16+ and make.
-
-```sh
-git clone https://github.com/pkristian/casegen.git && cd casegen && make && sudo make install
-```
-
-`make install PREFIX=~/.local` to avoid `sudo`.
-
-`make uninstall` removes exactly what was installed, reading the manifest CMake wrote —
-it does not guess at paths. `DESTDIR` is honoured for staged/package builds.
-
-## Build
-
-```sh
-make           # same as `make build`; binary lands at ./casegen
-make test      # build, then run the golden-file suite
-make clean
-```
-
-CMake owns the build; the `Makefile` is a verb list in front of it. Editors get a
-compilation database from `make configure` (or any build), symlinked to
-`compile_commands.json` at the repo root.
+Short options bundle, and `-c` takes the rest of its token as the case — so `-icc` is
+`-i` plus `-c c`.
 
 ---
 
@@ -102,7 +86,7 @@ characters at all, like `//----` — comes back blank. Output stays aligned with
 
 ### Cases
 
-| | Case | `Casegen` + `Case` | Also accepted as |
+| Short | Case | `Casegen` + `Case` | Also accepted as |
 |---|---|---|---|
 | `-c` | camel | `casegenCase` | |
 | `-P` | pascal | `CasegenCase` | `studly` |
@@ -134,7 +118,7 @@ casegen -csnake  casegen --case=snake      casegen --case snake
 Input is the concatenation of the operands, in order. `-` is stdin *at that position*, so
 placement is explicit rather than encoded in a flag:
 
-| | |
+| Invocation | Reads |
 |---|---|
 | `casegen -c s f1 f2` | f1, then f2 |
 | `casegen -c s -i` | stdin only |
@@ -293,7 +277,7 @@ placeholder is left alone.
 `raw` suppresses substitution — not the marker, which is how a block's own `casegen:end`
 is still found. `raw-next-line` protects a single line, and works inside a loop:
 
-`columns.php`:
+`constants.php`:
 
 ```php
 <?php
@@ -304,7 +288,7 @@ is still found. `raw-next-line` protects a single line, and works inside a loop:
  */
 // casegen:end
 
-class Columns
+class Constants
 {
 // casegen:foreach
 // casegen:raw-next-line
@@ -318,7 +302,7 @@ class Columns
 ```
 
 ```sh
-casegen columns.php
+casegen constants.php
 ```
 
 ```php
@@ -328,7 +312,7 @@ casegen columns.php
  * This header documents it, so it has to come through untouched.
  */
 
-class Columns
+class Constants
 {
     /** Rendered from the casegen_case placeholder. */
     public const USER_PROFILE = 'user_profile';
@@ -349,13 +333,29 @@ collection, so loops do not nest, and looping a literal region would only repeat
 ### Errors
 
 A malformed template is a usage error, not a machine failure — exit 2, with the location
-and no usage block. A line that turns out to be an error is checked before any of it is
-written, so a failed render never leaves half a line on stdout.
+and no usage block.
+
+`broken.php` — a placeholder with no `foreach` around it, so there is no record to bind:
+
+```php
+<?php
+
+class Columns
+{
+    const COL_CASEGEN_CASE = 'casegen_case';
+}
+```
 
 ```console
-$ casegen e.tmpl
-casegen: e.tmpl:1: placeholder "CASEGEN_CASE" outside foreach — there is no record to bind it to
+$ casegen broken.php
+casegen: broken.php:5: placeholder "CASEGEN_CASE" outside foreach — there is no record to bind it to
+$ echo $?
+2
 ```
+
+Lines already rendered are on stdout — the first four, here. The line that failed is not
+partially written, though: it is checked before any of it is emitted, so a failed render
+never leaves half a line behind.
 
 A `foreach` over zero records, or records with no `foreach` to put them in, warns on
 stderr and exits 0. `-q` suppresses warnings.
@@ -389,7 +389,7 @@ dunder
 
 ## Exit codes
 
-| | |
+| Code | Meaning |
 |---|---|
 | `0` | fine |
 | `1` | runtime failure — unreadable file, I/O error |
@@ -397,6 +397,53 @@ dunder
 
 EOF is distinguished from a read error: a directory or a closed fd 0 names the path and
 exits 1, while an empty file or `< /dev/null` is zero records and exit 0.
+
+## Install
+
+The one-liner at the top installs any missing build dependencies, clones into a temporary
+directory, builds, installs to `/usr/local/bin`, and deletes the clone on the way out —
+including when it fails partway.
+
+| Flag | Meaning |
+|---|---|
+| `--prefix DIR` | install somewhere you already own; no `sudo` needed |
+| `--no-deps` | never touch the package manager |
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/pkristian/casegen/master/install.sh | sh -s -- --prefix ~/.local
+```
+
+Piping a script from the internet into a shell is a habit worth being deliberate about.
+`install.sh` is about a hundred readable lines, so fetch it and look before you run it:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/pkristian/casegen/master/install.sh -o install.sh
+less install.sh && sh install.sh
+```
+
+### From source
+
+Needs a C11 compiler, CMake 3.16+ and make.
+
+```sh
+git clone https://github.com/pkristian/casegen.git && cd casegen && make && sudo make install
+```
+
+`make install PREFIX=~/.local` to avoid `sudo`. `make uninstall` removes exactly what was
+installed, reading the manifest CMake wrote — it does not guess at paths. `DESTDIR` is
+honoured for staged and package builds.
+
+## Build
+
+```sh
+make           # same as `make build`; binary lands at ./casegen
+make test      # build, then run the golden-file suite
+make clean
+```
+
+CMake owns the build; the `Makefile` is a verb list in front of it. Editors get a
+compilation database from `make configure` (or any build), symlinked to
+`compile_commands.json` at the repo root.
 
 ## Tests
 
