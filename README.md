@@ -24,15 +24,35 @@ its own output, and stays valid-looking code in whatever language it targets.
 ## Install
 
 ```sh
+curl -fsSL https://raw.githubusercontent.com/pkristian/casegen/master/install.sh | sh
+```
+
+That installs any missing build dependencies, clones into a temporary directory, builds,
+installs to `/usr/local/bin`, and deletes the clone on the way out — including when it
+fails partway. `--prefix ~/.local` installs somewhere you already own and needs no `sudo`;
+`--no-deps` never touches the package manager.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/pkristian/casegen/master/install.sh | sh -s -- --prefix ~/.local
+```
+
+Piping a script from the internet into a shell is a habit worth being deliberate about.
+`install.sh` is about a hundred readable lines, so fetch it and look before you run it:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/pkristian/casegen/master/install.sh -o install.sh
+less install.sh && sh install.sh
+```
+
+### By hand
+
+Needs a C11 compiler, CMake 3.16+ and make.
+
+```sh
 git clone https://github.com/pkristian/casegen.git && cd casegen && make && sudo make install
 ```
 
-Needs a C11 compiler, CMake 3.16+ and make. That puts `casegen` in `/usr/local/bin`.
-To avoid `sudo`, install somewhere you already own:
-
-```sh
-git clone https://github.com/pkristian/casegen.git && cd casegen && make && make install PREFIX=~/.local
-```
+`make install PREFIX=~/.local` to avoid `sudo`.
 
 `make uninstall` removes exactly what was installed, reading the manifest CMake wrote —
 it does not guess at paths. `DESTDIR` is honoured for staged/package builds.
