@@ -1,0 +1,54 @@
+== columns.tmpl (inline data after end-template)
+<?php
+
+class Columns
+{
+    const COL_USER_PROFILE = 'user_profile';
+    const COL_CREATED_AT = 'created_at';
+    const COL_IS_ACTIVE = 'is_active';
+}
+== columns.tmpl - (stdin appends to the file's own data section)
+<?php
+
+class Columns
+{
+    const COL_USER_PROFILE = 'user_profile';
+    const COL_CREATED_AT = 'created_at';
+    const COL_IS_ACTIVE = 'is_active';
+    const COL_IS_DELETED = 'is_deleted';
+}
+== every-case.tmpl (one line per row of the case table)
+# The placeholder written in all 17 cases. Each line pins one row of the case table:
+# whichever case the template used is the case the record comes back in.
+camel            userProfile
+pascal           UserProfile
+snake            user_profile
+screaming-snake  USER_PROFILE
+kebab            user-profile
+screaming-kebab  USER-PROFILE
+train            User-Profile
+title            User Profile
+sentence         User profile
+lower            user profile
+upper            USER PROFILE
+dot              user.profile
+path             user/profile
+ada              User_Profile
+camel-snake      user_Profile
+flat             userprofile
+upper-flat       USERPROFILE
+== two-loops.tmpl (content outside a loop is emitted once)
+-- Two loops in one template, with content between and around them. Everything
+-- outside a loop is emitted once; each loop repeats over the same one collection.
+create table demo (
+    user_profile text,
+    created_at text,
+    primary key (id)
+);
+create index idx_user_profile on demo (user_profile);
+create index idx_created_at on demo (created_at);
+== plain.tmpl (no directives, no placeholders)
+A template with no directives and no placeholders is a copy machine.
+	Leading tabs, inner   spacing and blank lines survive.
+
+Even a line mentioning cases in passing: camelCase, snake_case.

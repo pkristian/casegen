@@ -35,7 +35,7 @@ some Ruby/Go libs use `CASEGEN-CASE`. Pick one, document it, accept the aliases.
 ## Invocation
 
 ```
-casegen [-i] [-q] -c CASE [FILE|-]...
+casegen [-i] [-q] [-c CASE] [FILE|-]...
 ```
 
 Input is the concatenation of the operands, in order. `-` is stdin *at that
@@ -98,20 +98,48 @@ args   := rest of line, minus trailing comment delimiters
 - Everything after the first whitespace is arguments.
 - Verbs are **strictly lowercase**. Reject `casegen:FOREACH` with an error rather
   than normalizing — this is a case tool, don't blur which layer is converting.
-- Strip trailing delimiters from args before splitting: `-->`, `*/`, `--%>`, `?>`, `#}`.
-  Do this once in the lexer. Otherwise `<!-- casegen:foreach as CasegenCase -->`
-  parses `-->` as an argument.
+- Strip trailing delimiters — `-->`, `*/`, `--%>`, `?>`, `#}` — **before** tokenizing,
+  not after. Doing it first is what lets `<!--casegen:end-->` lex the same as
+  `<!-- casegen:end -->`; strip afterwards and the verb token comes out as `end-->`.
+  Strip repeatedly, too — `<?php /* casegen:raw */ ?>` closes two wrappers at once.
 
 ### Verbs
 
-| Directive | Args |
-|---|---|
-| `casegen:foreach` | `[as <Placeholder>]` — reserved, parsed and ignored in v1 |
-| `casegen:end` | `[<verb>]` — optional label, validated against the open block |
-| `casegen:raw` | — (block, until `casegen:end`) |
-| `casegen:raw-next-line` | — |
-| `casegen:placeholder` | `<Two Words>` |
-| `casegen:end-template` | — everything after this line is data, not template |
+| Directive | Args | Where |
+|---|---|---|
+| `casegen:foreach` | `[as <Two Words>]` — renames the placeholder for this block | top level only |
+| `casegen:end` | `[<verb>]` — optional label, validated against the innermost block | — |
+| `casegen:raw` | — (block, until `casegen:end`) | anywhere but inside `raw` |
+| `casegen:raw-next-line` | — | anywhere |
+| `casegen:placeholder` | `<Two Words>` — renames the placeholder from here on | top level only |
+| `casegen:var` | `<Two Words> = <value>` | top level only |
+| `casegen:end-template` | — everything after is data, not template | anywhere; first wins |
+
+### Placeholders
+
+A placeholder is a **name**, not a syntax. Write the name in the case you want out and
+that is what you get, so a template is a working example of its own output:
+
+```php
+const COL_CASEGEN_CASE = 'casegen_case';   →   const COL_USER_PROFILE = 'user_profile';
+```
+
+The default name is `Casegen Case`. It is rendered in all 17 non-alias cases to give 17
+needles — aliases are skipped because they render identically to a canonical case. Scanning
+a content line left to right, **longest match wins**, ties going to the binding defined
+first, so nothing depends on scan order.
+
+A `var` is the same object with a fixed value instead of a per-record one. That is the
+whole reason it costs nothing: one scanner, one set of renderings, no second mechanism.
+Two of them landing in one token falls out for free —
+`'table_prefix_casegen_case'` → `'shop_customer_order'`.
+
+Names must be **two or more words**. One word renders the same in snake, kebab, dot, path,
+flat and lower alike, so the case the author wrote would no longer say which case they
+meant — there would be nothing left for the scanner to read.
+
+Matching is plain substring and unanchored, which is exactly what makes `COL_CASEGEN_CASE`
+work. Output is never rescanned: a value that happens to contain a needle is left alone.
 
 No trailing/same-line `raw-line` form: the strict rule eats the whole line, so a
 directive can never share a line with code it protects. Use `raw-next-line`.
@@ -155,7 +183,9 @@ there is no `-t` flag.
 One implicit collection: the newline-delimited records that follow
 `casegen:end-template` in the assembled input. `foreach` takes no
 collection argument — it marks *which region repeats*. Everything outside a
-`foreach` block is emitted once, verbatim. Same shape as awk's `BEGIN` / body / `END`.
+`foreach` block is emitted once. Same shape as awk's `BEGIN` / body / `END`.
+(Once, but not *verbatim*: vars still substitute out there. Only the loop placeholder
+cannot, having no record to bind to — see **Decided**.)
 
 ```php
 <?php
@@ -168,26 +198,37 @@ class Columns
 }
 ```
 
-### Still open before the engine is written
-
-- **Does substitution happen outside `foreach`?** The parsing rule says every
-  content line gets substitution; the loop model says everything outside a
-  `foreach` is emitted *"once, verbatim"*. Both cannot hold. Suggested: constants
-  substitute everywhere, and the loop placeholder outside a loop is an error —
-  it has no record to bind to.
-- **A `foreach` over zero records** — silent empty output, or a warning? Warning
-  (suppressed by `-q`), exit 0, seems right.
-- **Is `raw` inherited into `foreach`?** Nesting needs a stack. If v1 stays flat,
-  `foreach` inside `raw` should be a hard error rather than quietly doing something.
-- **`casegen:var <Two Words> = <value>`** — proposed, not yet in the verb table. A
-  var is just a second placeholder bound to a constant instead of to the loop
-  record, so it reuses the entire substitution engine: same renderings, same
-  scanner, no new rendering code. Two vars can land inside one token —
-  `'table_prefix_entity_name'` → `'shop_customer_order'` — which falls out for
-  free and is the main argument for making vars placeholders rather than a
-  separate mechanism.
-
 ## Decided
+
+- **Substitution outside `foreach`: vars yes, the loop placeholder no.** This is what
+  resolves the contradiction between *"every content line gets substitution"* and
+  *"everything outside a `foreach` is emitted once, verbatim"* — both cannot hold. A var
+  has a value at all times, so it substitutes anywhere. The loop placeholder outside a
+  loop has no record to bind to and is a hard error, reported at `file:line`.
+- **Blocks nest, via a stack.** `raw` inside `foreach` is the case that matters and is
+  legal. `foreach` only opens at the top level, which keeps *one implicit collection*
+  intact and rejects `foreach` inside `foreach` (there is nothing to nest over) and
+  `foreach` inside `raw` (a literal region looped is just a literal region repeated).
+  `raw` inside `raw` is an error too — it changes nothing. Real depth therefore never
+  exceeds 2, but the code uses a stack anyway so `end` labels and the *"never closed"*
+  diagnostic work the same at every level.
+- **Declarations are top level only.** `var` and `placeholder` take effect from their line
+  onward. Allowing them inside a `foreach` would raise the question of what a declaration
+  means on the third replay of the body, and there is no answer worth having.
+- **`raw` suppresses substitution, not the marker.** Directive lines are always consumed —
+  that is how a `raw` block's own `casegen:end` is still found. The cost is that a line
+  containing `casegen:` can never be emitted literally. See *marker false positives* below.
+- **A `foreach` over zero records warns and exits 0**, suppressed by `-q`, and the message
+  names the likely cause (a missing `casegen:end-template`). Records with no `foreach` to
+  put them in warns too. This is the first thing `-q` has ever had to suppress.
+- **Records that split to zero words are skipped**, so blank lines can space out a data
+  block. Note this is the opposite of case mode's *one input line = one output line* —
+  different mode, different job: there, a blank line is output; here, it is punctuation.
+- **Template errors exit 2, not 1.** A malformed template is the user getting it wrong,
+  like a bad flag — not a machine failure, which is what 1 means. They print
+  `casegen: file:line: message` and no usage block, because the usage block has nothing
+  to say about templates. A line that turns out to be an error is checked before any of it
+  is written, so a failed render never leaves half a line on stdout.
 
 - **Digits are transparent.** A digit never creates a word boundary on its own; it
   continues the current word. Boundaries come only from separators and *letter*
@@ -239,19 +280,21 @@ class Columns
   - `NUL` deserves its own message: `fgets` reads it but every `str*` call then
     treats the line as ending there, so half a line is processed with no sign.
   - Default should stay exit 0 (the mangled output is visible on stdout anyway);
-    add `--strict` to promote to fatal, and `-q` to suppress. `-q` already exists
-    and is parsed — it simply has no warnings to suppress yet.
+    add `--strict` to promote to fatal, and `-q` to suppress. `-q` now suppresses
+    the two template warnings, so the plumbing is there to reuse.
   - **Blocked on the test harness**: `runTests.sh:135` uses `first_match` on
     `output.returned.*`, so it only ever diffs one file. Adding
     `output.expected.err` would sort before `.txt` and silently stop checking
     stdout — every test would still report PASS. Fix the runner to pair files by
-    extension first. (`tests/input-errors` sidesteps this by folding stderr and
-    exit codes into the single stdout file itself.)
+    extension first. (`tests/input-errors` and `tests/template-warnings` both
+    sidestep this by folding stderr and exit codes into the single stdout file.)
 - **Unicode proper** — `ß` uppercases to `SS`, Turkish dotless `ı`, etc. Only if
   ASCII-only ever becomes painful.
 - **Marker false positives** — any line containing `casegen:` is eaten, including a
-  URL, a docblock mentioning the tool, or prose. Make the marker configurable
-  (`--marker`) and warn on an unknown verb instead of silently dropping the line.
+  URL, a docblock mentioning the tool, or prose. An unknown verb is at least loud now
+  (`unknown directive "casegen:whatever"`, exit 2) rather than a line that silently
+  vanishes, so the failure mode is a stopped build and not a missing line. What is left
+  is making the marker configurable with `--marker`.
 - **Trailing separators in loops** — generating a comma-separated list needs
   first/last or index access. PHP tolerates a trailing comma; SQL and JSON do not.
 - **Index/position access** — no `$i` in v1, but decide whether the syntax is reserved.

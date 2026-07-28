@@ -1,0 +1,15 @@
+-- Two loops in one template, with content between and around them. Everything
+-- outside a loop is emitted once; each loop repeats over the same one collection.
+create table demo (
+-- casegen:foreach
+    casegen_case text,
+-- casegen:end
+    primary key (id)
+);
+-- casegen:foreach
+create index idx_casegen_case on demo (casegen_case);
+-- casegen:end
+-- casegen:end-template
+user profile
+
+created at

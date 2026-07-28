@@ -15,7 +15,7 @@ typedef struct
 
 void usage(FILE *out)
 {
-    fputs("Usage: casegen [-i] [-q] -c CASE [FILE|-]...\n"
+    fputs("Usage: casegen [-i] [-q] [-c CASE] [FILE|-]...\n"
           "\n"
           "Input:\n"
           "  FILE...          read in order; \"-\" is stdin at that position\n"
@@ -24,7 +24,9 @@ void usage(FILE *out)
           "\n"
           "Mode:\n"
           "  -c, --case=CASE  render every input line in CASE\n"
-          "  (no -c)          template mode\n"
+          "  (no -c)          template mode: any line carrying \"casegen:\" is a\n"
+          "                   directive, and a placeholder written in some case\n"
+          "                   comes back in that same case\n"
           "\n"
           "Other:\n"
           "  -q, --quiet      suppress warnings\n"

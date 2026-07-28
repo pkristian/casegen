@@ -1,0 +1,20 @@
+== vars.tmpl (constants, longest match, two bindings in one token)
+A var binds a placeholder to a constant, so it substitutes outside a loop too:
+  shop   Shop   SHOP   shop   Shop
+
+Longest match wins: the two-word name above does not eat the three-word one below,
+even though it starts it.
+  wholesale_depot   WHOLESALE_DEPOT   wholesaleDepot   wholesale.depot
+
+    '<?= shop_customer_order ?>' => ShopCustomerOrder::class,
+    '<?= shop_line_item ?>' => ShopLineItem::class,
+== naming.tmpl (placeholder renames the loop binding, as scopes the rename)
+# The loop placeholder has been renamed for the whole file from here on.
+  renamed     user_profile -> UserProfile
+  the default casegen_case is now just text
+
+# `as` renames it again, but only for the block it opens.
+  scoped      user_profile -> USER_PROFILE
+  and column_name is just text in here
+
+  restored    user_profile -> User-Profile

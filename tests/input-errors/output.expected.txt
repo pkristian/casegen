@@ -16,6 +16,4 @@ exit=2 -- casegen -c lower a.txt - - -
 casegen: "-" given 3 times; stdin can only be read once
 exit=1 -- casegen -c lower nosuch.txt
 casegen: nosuch.txt: No such file or directory
-exit=1 -- casegen a.txt
-casegen: template mode is not implemented yet
-casegen: use -c CASE to render input lines (see --help)
+exit=0 -- casegen a.txt

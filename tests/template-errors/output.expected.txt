@@ -1,0 +1,41 @@
+exit=2 -- uppercase verb
+casegen: bad.tmpl:2: directive "FOREACH" is not lowercase — this is a case tool, so it will not quietly convert one for you
+exit=2 -- unknown verb
+casegen: bad.tmpl:1: unknown directive "casegen:nosuchverb"
+exit=2 -- marker with no verb
+casegen: bad.tmpl:1: the marker has no directive after it
+exit=2 -- foreach in foreach
+casegen: bad.tmpl:2: foreach inside foreach (opened at bad.tmpl:1) — there is one collection, so loops do not nest
+exit=2 -- foreach in raw
+casegen: bad.tmpl:2: foreach inside raw (opened at bad.tmpl:1) — a raw region is literal text, so looping it would only repeat it
+exit=2 -- raw in raw
+casegen: bad.tmpl:2: raw is already open — nesting it changes nothing
+exit=2 -- end label mismatch
+casegen: bad.tmpl:2: end raw closes the foreach opened at bad.tmpl:1
+exit=2 -- block never closed
+casegen: bad.tmpl:1: foreach is never closed
+exit=2 -- end with nothing open
+casegen: bad.tmpl:1: casegen:end with no open block
+exit=2 -- raw takes no args
+casegen: bad.tmpl:1: casegen:raw takes no arguments, got "extra"
+exit=2 -- foreach arg not "as"
+casegen: bad.tmpl:1: foreach takes only "as <Two Words>", got "bogus"
+exit=2 -- one-word placeholder
+casegen: bad.tmpl:1: placeholder needs a name of two or more words, got "Solo" — one word looks the same in most cases, leaving nothing to tell them apart
+exit=2 -- one-word foreach as
+casegen: bad.tmpl:1: foreach as needs a name of two or more words, got "Solo" — one word looks the same in most cases, leaving nothing to tell them apart
+exit=2 -- var without =
+casegen: bad.tmpl:1: var needs "<Two Words> = <value>", got "No Equals here"
+exit=2 -- var with empty value
+casegen: bad.tmpl:1: var "Table Prefix" has no value — it would erase the placeholder rather than replace it
+exit=2 -- duplicate var
+casegen: bad.tmpl:2: "Table Prefix" is already the var defined at bad.tmpl:1
+exit=2 -- var over the loop name
+casegen: bad.tmpl:1: "Casegen Case" is the built-in loop placeholder — pick another name, or rename it first with casegen:placeholder
+exit=2 -- as is undone at end
+casegen: bad.tmpl:1: warning: foreach matched 0 records — is a casegen:end-template section missing?
+casegen: bad.tmpl:3: "Casegen Case" is the built-in loop placeholder — pick another name, or rename it first with casegen:placeholder
+exit=2 -- declaration in a block
+casegen: bad.tmpl:2: casegen:var inside foreach (opened at bad.tmpl:1) — declarations belong at the top level, where it is plain which lines they cover
+exit=2 -- placeholder outside loop
+casegen: bad.tmpl:1: placeholder "CASEGEN_CASE" outside foreach — there is no record to bind it to

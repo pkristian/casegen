@@ -1,0 +1,23 @@
+Whatever wraps the marker is part of a line that gets thrown away, so every
+comment syntax works with no code that knows about any of them.
+// casegen:foreach
+  slashes     CasegenCase
+   # casegen:raw-next-line
+  hash        CasegenCase
+<!-- casegen:raw-next-line -->
+  html        CasegenCase
+/* casegen:raw-next-line */
+  c block     CasegenCase
+<%-- casegen:raw-next-line --%>
+  jsp         CasegenCase
+-- casegen:raw-next-line
+  sql         CasegenCase
+{# casegen:raw-next-line #}
+  jinja       CasegenCase
+<?php /* casegen:raw-next-line */ ?>
+  php         CasegenCase
+<!--casegen:raw-next-line-->
+  no spaces   CasegenCase
+// casegen:end
+// casegen:end-template
+user profile

@@ -1,0 +1,18 @@
+# casegen:placeholder Column Name
+# The loop placeholder has been renamed for the whole file from here on.
+# casegen:foreach
+  renamed     column_name -> ColumnName
+  the default casegen_case is now just text
+# casegen:end
+
+# `as` renames it again, but only for the block it opens.
+# casegen:foreach as Field Label
+  scoped      field_label -> FIELD_LABEL
+  and column_name is just text in here
+# casegen:end
+
+# casegen:foreach
+  restored    column_name -> Column-Name
+# casegen:end
+# casegen:end-template
+user profile

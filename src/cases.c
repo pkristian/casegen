@@ -57,7 +57,9 @@ static const CaseSpec CASES[] = {
     {   "slash",            0,    "/",  STYLE_LOWER, STYLE_LOWER,        1 },
 };
 
-static const size_t CASE_COUNT = sizeof CASES / sizeof CASES[0];
+/* A macro, not a const, so it can size an array: the template scanner keeps one
+   needle per case and wants a compile-time bound. */
+#define CASE_COUNT (sizeof CASES / sizeof CASES[0])
 
 
 /* A single-byte argument is looked up as a short code, anything longer as a name. */
@@ -77,23 +79,48 @@ const CaseSpec *findCase(const char *s)
 }
 
 
-/* Words arrive already lowercased from splitWords, so LOWER is a no-op here. */
-void renderCase(const StringList *words, const CaseSpec *spec, FILE *out)
+/* Words arrive already lowercased from splitWords, so LOWER is a no-op here.
+   The caller owns the returned string. The template engine renders into memory —
+   it compares against what it built — so this, not the FILE* form, is the primitive. */
+char *renderCaseAlloc(const StringList *words, const CaseSpec *spec)
 {
+    const size_t sepLen = strlen(spec->sep);
+    size_t len = words->count ? sepLen * (words->count - 1) : 0;
+    for (size_t i = 0; i < words->count; i++)
+        len += strlen(words->item[i]);
+
+    char *rendered = malloc(len + 1);
+    if (!rendered)
+        outOfMemory();
+
+    size_t n = 0;
     for (size_t i = 0; i < words->count; i++)
     {
         if (i > 0)
-            fputs(spec->sep, out);
+        {
+            memcpy(rendered + n, spec->sep, sepLen);
+            n += sepLen;
+        }
 
         const char *w = words->item[i];
         const WordStyle style = (i == 0) ? spec->first : spec->rest;
 
         for (size_t j = 0; w[j] != '\0'; j++)
         {
-            unsigned char c = (unsigned char)w[j];
-            if (style == STYLE_UPPER || (style == STYLE_CAP && j == 0))
-                c = toAsciiUpper(c);
-            fputc(c, out);
+            const unsigned char c = (unsigned char)w[j];
+            const int upper = (style == STYLE_UPPER) || (style == STYLE_CAP && j == 0);
+            rendered[n++] = (char)(upper ? toAsciiUpper(c) : c);
         }
     }
+
+    rendered[n] = '\0';
+    return rendered;
+}
+
+
+void renderCase(const StringList *words, const CaseSpec *spec, FILE *out)
+{
+    char *rendered = renderCaseAlloc(words, spec);
+    fputs(rendered, out);
+    free(rendered);
 }

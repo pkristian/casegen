@@ -1,0 +1,29 @@
+== raw.tmpl (block, next-line, and a raw region inside a loop)
+A raw block is emitted verbatim: casegen_case, CasegenCase, CASEGEN_CASE.
+
+Outside it, a var still substitutes: shop.
+But not here: table_prefix.
+And here again: Shop.
+
+    substituted: UserProfile = 'user_profile'
+    one line held back: CasegenCase = 'casegen_case'
+    a raw region inside the loop:
+        casegen_case, CASEGEN-CASE, table_prefix
+    substituted again: user.profile
+    substituted: CreatedAt = 'created_at'
+    one line held back: CasegenCase = 'casegen_case'
+    a raw region inside the loop:
+        casegen_case, CASEGEN-CASE, table_prefix
+    substituted again: created.at
+== wrappers.tmpl (every comment syntax, one raw-next-line each)
+Whatever wraps the marker is part of a line that gets thrown away, so every
+comment syntax works with no code that knows about any of them.
+  slashes     UserProfile
+  hash        CasegenCase
+  html        CasegenCase
+  c block     CasegenCase
+  jsp         CasegenCase
+  sql         CasegenCase
+  jinja       CasegenCase
+  php         CasegenCase
+  no spaces   CasegenCase

@@ -1,0 +1,23 @@
+// casegen:var Table Prefix = shop
+/* casegen:raw */
+A raw block is emitted verbatim: casegen_case, CasegenCase, CASEGEN_CASE.
+/* casegen:end raw */
+
+Outside it, a var still substitutes: table_prefix.
+-- casegen:raw-next-line
+But not here: table_prefix.
+And here again: TablePrefix.
+
+// casegen:foreach
+    substituted: CasegenCase = 'casegen_case'
+// casegen:raw-next-line
+    one line held back: CasegenCase = 'casegen_case'
+// casegen:raw
+    a raw region inside the loop:
+        casegen_case, CASEGEN-CASE, table_prefix
+// casegen:end raw
+    substituted again: casegen.case
+// casegen:end foreach
+// casegen:end-template
+user profile
+created at

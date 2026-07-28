@@ -17,6 +17,7 @@
 #include "split.c"
 #include "cases.c"
 #include "input.c"
+#include "template.c"
 #include "args.c"
 
 
@@ -26,27 +27,28 @@ int main(const int argc, char *argv[])
     parseArgs(argc, argv, &opt);
     validateArgs(&opt);
 
-    if (!opt.spec)
-    {
-        fprintf(stderr, "casegen: template mode is not implemented yet\n");
-        fprintf(stderr, "casegen: use -c CASE to render input lines (see --help)\n");
-        exit(1);
-    }
-
+    /* Both modes read the same assembled input; only what happens to it differs. */
     StringList lines = {0};
+    SourceMap map = {0};
     for (size_t i = 0; i < opt.sources.count; i++)
-        loadSource(opt.sources.item[i], &lines);
+        loadSource(opt.sources.item[i], &lines, &map);
 
-    /* One input line = one output line, so a line with no words prints blank. */
-    for (size_t i = 0; i < lines.count; i++)
+    if (opt.spec)
     {
-        StringList words = {0};
-        splitWords(lines.item[i], &words);
-        renderCase(&words, opt.spec, stdout);
-        fputc('\n', stdout);
-        stringsFree(&words);
+        /* One input line = one output line, so a line with no words prints blank. */
+        for (size_t i = 0; i < lines.count; i++)
+        {
+            StringList words = {0};
+            splitWords(lines.item[i], &words);
+            renderCase(&words, opt.spec, stdout);
+            fputc('\n', stdout);
+            stringsFree(&words);
+        }
     }
+    else
+        renderTemplate(&lines, &map, opt.quiet);
 
+    spansFree(&map);
     stringsFree(&lines);
     stringsFree(&opt.sources);
     return 0;

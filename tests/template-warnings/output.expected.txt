@@ -1,0 +1,24 @@
+== foreach over zero records
+exit=0
+-- stdout
+class Columns {
+}
+-- stderr
+casegen: warn.tmpl:2: warning: foreach matched 0 records — is a casegen:end-template section missing?
+== foreach over zero records (-q)
+exit=0
+-- stdout
+class Columns {
+}
+-- stderr
+== records with no foreach
+exit=0
+-- stdout
+nothing repeats here
+-- stderr
+casegen: warning: 2 record(s) after casegen:end-template, but the template has no casegen:foreach to put them in
+== records with no foreach (-q)
+exit=0
+-- stdout
+nothing repeats here
+-- stderr

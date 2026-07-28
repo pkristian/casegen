@@ -1,0 +1,15 @@
+// casegen:var Table Prefix = shop
+// casegen:var Table Prefix Name = wholesale depot
+A var binds a placeholder to a constant, so it substitutes outside a loop too:
+  table_prefix   TablePrefix   TABLE_PREFIX   table-prefix   Table Prefix
+
+Longest match wins: the two-word name above does not eat the three-word one below,
+even though it starts it.
+  table_prefix_name   TABLE_PREFIX_NAME   tablePrefixName   table.prefix.name
+
+// casegen:foreach
+    '<?= table_prefix_casegen_case ?>' => TablePrefixCasegenCase::class,
+// casegen:end
+// casegen:end-template
+customer order
+line item
