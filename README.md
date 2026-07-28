@@ -293,20 +293,55 @@ placeholder is left alone.
 `raw` suppresses substitution — not the marker, which is how a block's own `casegen:end`
 is still found. `raw-next-line` protects a single line, and works inside a loop:
 
-```console
-$ cat r.tmpl
-// casegen:foreach
-    real: CasegenCase
-// casegen:raw-next-line
-    literal: CasegenCase
-// casegen:end
-// casegen:end-template
-user profile
+`columns.php`:
 
-$ casegen r.tmpl
-    real: UserProfile
-    literal: CasegenCase
+```php
+<?php
+// casegen:raw
+/**
+ * Generated from a casegen template — the placeholder is CasegenCase.
+ * This header documents it, so it has to come through untouched.
+ */
+// casegen:end
+
+class Columns
+{
+// casegen:foreach
+// casegen:raw-next-line
+    /** Rendered from the casegen_case placeholder. */
+    public const CASEGEN_CASE = 'casegen_case';
+// casegen:end
+}
+// casegen:end-template
+// user profile
+// line item
 ```
+
+```sh
+casegen columns.php
+```
+
+```php
+<?php
+/**
+ * Generated from a casegen template — the placeholder is CasegenCase.
+ * This header documents it, so it has to come through untouched.
+ */
+
+class Columns
+{
+    /** Rendered from the casegen_case placeholder. */
+    public const USER_PROFILE = 'user_profile';
+    /** Rendered from the casegen_case placeholder. */
+    public const LINE_ITEM = 'line_item';
+}
+```
+
+The header survives because it is documenting the placeholder rather than using it. The
+docblock inside the loop is protected line by line, while the constant under it is not.
+
+Note that a protected line inside a `foreach` is emitted once per record, identically —
+fine for a comment, but a repeated `const` would not compile.
 
 `raw` may nest inside `foreach`. `foreach` only opens at the top level: there is one
 collection, so loops do not nest, and looping a literal region would only repeat it.
