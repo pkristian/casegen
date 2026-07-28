@@ -1,3 +1,8 @@
+> If you know snake_case and you know PascalCase, you need not fear the result of a
+> hundred refactorings.
+>
+> — Sun Tzu, probably
+
 # casegen
 
 Short for **case generator**. It converts words between cases, and renders templates in
