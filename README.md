@@ -1,7 +1,9 @@
-> If you know snake_case and you know PascalCase, you need not fear the result of a
-> hundred refactorings.
->
-> — Sun Tzu, probably
+<p align="center">
+  <em>If you know snake_case and you know PascalCase,<br>
+  you need not fear the result of a hundred refactorings.</em>
+  <br><br>
+  — Sun Tzu, probably
+</p>
 
 # casegen
 
