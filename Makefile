@@ -38,13 +38,19 @@ $(OBJDIR):
 # build with `bear -- make`, but every file here goes through one pattern rule with one
 # set of flags, so the answer is known without watching anything.
 #
-# Regenerated when a source is added or removed, or when this file changes — the flags
-# it records live here. -MMD -MP are deliberately left out: they exist to write .d files
-# during a build, and nothing indexing the code should be producing those.
+# Regenerated when a source changes, when one is added or removed, or when this file
+# changes — the flags it records live here. -MMD -MP are deliberately left out: they
+# exist to write .d files during a build, and nothing indexing the code should be
+# producing those.
+#
+# $(SRCDIR) is in the prerequisites for the *removal* case, and is not redundant with
+# $(SRC). Deleting a source leaves every remaining one older than the database, so make
+# would call it up to date and keep listing a file that no longer exists. A directory's
+# mtime moves whenever an entry appears or disappears, which is exactly the signal.
 #
 # Not removed by `clean`. It is an editor artifact, not a build output, and deleting it
 # would break indexing until someone noticed and ran this again.
-compile_commands.json: $(SRC) Makefile
+compile_commands.json: $(SRC) $(SRCDIR) Makefile
 	@printf '[\n' > $@
 	@for src in $(SRC); do \
 	    printf '  {\n    "directory": "%s",\n    "file": "%s",\n    "command": "%s"\n  },\n' \
