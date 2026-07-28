@@ -301,3 +301,11 @@ make test ARGS="-q splitter"     # quiet, one test
 
 [`TODO.md`](TODO.md) carries the reasoning: which rules were chosen, what was rejected and
 why, and what is deliberately left for later.
+
+## License
+
+Copyright (C) 2026 Patrik Kristian
+
+GPL-3.0-or-later — see [LICENSE](LICENSE). This program is free software: you may
+redistribute and modify it under version 3 of the GNU General Public License, or (at your
+option) any later version. It comes with no warranty; see the license for details.
