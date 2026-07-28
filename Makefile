@@ -13,14 +13,20 @@ BUILDDIR := cmake-build
 
 # cmake --build re-runs cmake by itself when CMakeLists.txt changes, so the cache file
 # only has to exist; it does not have to be up to date with anything.
-build: $(BUILDDIR)/CMakeCache.txt
+build: compile_commands.json
 	cmake --build $(BUILDDIR)
-	@ln -sf $(BUILDDIR)/compile_commands.json compile_commands.json
 
-configure: $(BUILDDIR)/CMakeCache.txt
+configure: compile_commands.json
 
 $(BUILDDIR)/CMakeCache.txt:
 	cmake -S . -B $(BUILDDIR)
+
+# Configuring is what writes the database, so this needs no compiling — `make configure`
+# is enough to get an editor indexing again after a clean. It has to be a symlink into
+# the build tree rather than a file that outlives it: `clean` deletes cmake-build/, and
+# a dangling link would be worse than an absent one.
+compile_commands.json: $(BUILDDIR)/CMakeCache.txt
+	@ln -sf $(BUILDDIR)/compile_commands.json $@
 
 # No longer `clean build`. That existed because the old rules could not be fully trusted
 # to notice a header change; CMake tracks dependencies properly, so a rebuild already
