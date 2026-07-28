@@ -170,8 +170,9 @@ Whatever wraps the marker is simply part of a line that gets thrown away.
 newline-delimited records, read verbatim — never scanned for directives or placeholders.
 Lines with no word characters are skipped, so blanks can space the data out.
 
-```console
-$ cat columns.tmpl
+`columns.tmpl`:
+
+```php
 <?php
 
 class Columns
@@ -184,8 +185,13 @@ class Columns
 user profile
 created at
 is active
+```
 
-$ casegen columns.tmpl
+```sh
+casegen columns.tmpl
+```
+
+```php
 <?php
 
 class Columns
@@ -199,9 +205,13 @@ class Columns
 Records can also come from anywhere else in the operand list, because a template file and
 `-` are both just operands read in order:
 
-```console
-$ printf 'session token\n' | casegen columns.tmpl -
-...
+```sh
+printf 'session token\n' | casegen columns.tmpl -
+```
+
+Same output as before, with one more constant on the end:
+
+```php
     const COL_IS_ACTIVE = 'is_active';
     const COL_SESSION_TOKEN = 'session_token';
 }
