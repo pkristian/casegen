@@ -3,6 +3,20 @@
 Short for **case generator**. Converts words between cases — and renders templates in
 which the placeholder *is* written in the case you want back.
 
+```sh
+curl -fsSL https://raw.githubusercontent.com/pkristian/casegen/master/install.sh | sh
+```
+
+```console
+$ printf 'hello world' | casegen -icc
+helloWorld
+```
+
+That bundle is `-i` (stdin is the whole input) and `-c c` (camel). More on
+[installing](#install) and on [what else it does](#case-mode) below.
+
+---
+
 ```php
 // casegen:foreach
     const COL_CASEGEN_CASE = 'casegen_case';
