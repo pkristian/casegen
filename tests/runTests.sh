@@ -102,7 +102,6 @@ for cmd in "$tests_dir"/*/command.sh; do
     should_run "$n" && tests_to_run+=("$n")
 done
 total=${#tests_to_run[@]}
-
 echo -en "${C_CYAN}${C_BOLD}"
 echo -e "+--------------------------+"
 echo -e "|    casegen test suite    |"
@@ -114,7 +113,10 @@ idx=0
 for name in "${tests_to_run[@]}"; do
     idx=$((idx+1))
     dir="$tests_dir/$name"
-    tag="${C_DIM}[$idx/$total]${C_OFF}"
+
+    tag="    $idx/$total"
+    tag="${tag: -7}"
+    tag="${C_DIM}[${tag}]${C_OFF}"
 
     # This test's limit: its own `timeout` file if it has one, else the default.
     limit="$default_timeout"
