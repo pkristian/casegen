@@ -1,7 +1,7 @@
 # casegen
 
-Convert words between cases — and render templates in which the placeholder *is* written
-in the case you want back.
+Short for **case generator**. Converts words between cases — and renders templates in
+which the placeholder *is* written in the case you want back.
 
 ```php
 // casegen:foreach
